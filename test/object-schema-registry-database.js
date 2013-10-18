@@ -18,11 +18,12 @@
 var expect = require('chai').expect;
 var cbConnManager = require('runrightfast-couchbase').couchbaseConnectionManager;
 var ObjectSchemaRegistryDatabase = require('..').ObjectSchemaRegistryDatabase;
+var ObjectSchema = require('runrightfast-validator').validatorDomain.ObjectSchema;
 
 describe('database', function() {
 	var database = null;
 
-	var idsToDelete = [];
+	var idsToDelete = {};
 
 	before(function(done) {
 
@@ -39,7 +40,8 @@ describe('database', function() {
 				console.log(result);
 
 				database = new ObjectSchemaRegistryDatabase({
-					couchbaseConn : cbConnManager.getBucketConnection('default')
+					couchbaseConn : cbConnManager.getBucketConnection('default'),
+					logLevel : 'DEBUG'
 				});
 
 				done();
@@ -51,10 +53,41 @@ describe('database', function() {
 	});
 
 	after(function(done) {
-		cbConnManager.stop(function() {
-			cbConnManager.clear();
-			done();
+		database.deleteMultiObjectSchema(idsToDelete).then(function(result) {
+			console.log(JSON.stringify(result, undefined, 2));
+			cbConnManager.stop(function() {
+				cbConnManager.clear();
+				done();
+			});
+		}, function(error) {
+			done(error);
 		});
+
+	});
+
+	it('can create a new ObjectSchema in the database', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema = new ObjectSchema(options);
+		idsToDelete[schema.namespace] = schema.version;
+		database.createObjectSchema(schema).then(function(result) {
+			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
+			try {
+				expect(result.cas).to.exist;
+				expect(result.schema instanceof ObjectSchema).to.equal(true);
+				done();
+			} catch (err) {
+				done(err);
+			}
+
+		}, function(err) {
+			done(error);
+		});
+
 	});
 
 });

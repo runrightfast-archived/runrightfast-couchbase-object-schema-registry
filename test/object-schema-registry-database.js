@@ -19,6 +19,7 @@ var expect = require('chai').expect;
 var cbConnManager = require('runrightfast-couchbase').couchbaseConnectionManager;
 var ObjectSchemaRegistryDatabase = require('..').ObjectSchemaRegistryDatabase;
 var ObjectSchema = require('runrightfast-validator').validatorDomain.ObjectSchema;
+var when = require('when');
 
 describe('database', function() {
 	var database = null;
@@ -52,11 +53,23 @@ describe('database', function() {
 
 	});
 
+	afterEach(function(done) {
+		database.deleteMultiObjectSchema(idsToDelete).then(function(result) {
+			console.log(JSON.stringify(result, undefined, 2));
+			idsToDelete = {};
+			done();
+		}, function(error) {
+			done(error);
+		});
+
+	});
+
 	after(function(done) {
 		database.deleteMultiObjectSchema(idsToDelete).then(function(result) {
 			console.log(JSON.stringify(result, undefined, 2));
 			cbConnManager.stop(function() {
 				cbConnManager.clear();
+				idsToDelete = {};
 				done();
 			});
 		}, function(error) {
@@ -87,7 +100,41 @@ describe('database', function() {
 		}, function(err) {
 			done(error);
 		});
+	});
 
+	it('can create a get an ObjectSchema from the database', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema = new ObjectSchema(options);
+		idsToDelete[schema.namespace] = schema.version;
+		database.createObjectSchema(schema).then(function(result) {
+			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
+			try {
+				expect(result.cas).to.exist;
+				expect(result.schema instanceof ObjectSchema).to.equal(true);
+
+				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+					console.log('(getObjectSchema() result : ' + JSON.stringify(result, undefined, 2));
+					var retrievedSchema = result.schema;
+					var retrievedSchemaCAS = result.cas;
+					expect(retrievedSchema).to.exist;
+					expect(retrievedSchemaCAS).to.exist;
+					expect(retrievedSchema.id).to.equal(result.schema.id);
+				}, function(err) {
+				});
+
+				done();
+			} catch (err) {
+				done(err);
+			}
+
+		}, function(err) {
+			done(error);
+		});
 	});
 
 });

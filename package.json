@@ -22,7 +22,7 @@
 		"hoek":"1.1.x",
 		"runrightfast-commons":"git://github.com/runrightfast/runrightfast-commons.git#0.0.12",
 		"runrightfast-couchbase":"git://github.com/runrightfast/runrightfast-couchbase.git#0.0.5",
-		"runrightfast-validator":"git://github.com/runrightfast/runrightfast-validator.git#0.0.5",
+		"runrightfast-validator":"git://github.com/runrightfast/runrightfast-validator.git#0.0.6",
 		"rest":"1.0.x",
 		"log4js":"0.6.x",
 		"hawk":"1.1.x",

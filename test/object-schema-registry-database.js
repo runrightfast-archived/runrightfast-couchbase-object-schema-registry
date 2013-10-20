@@ -452,4 +452,22 @@ describe('database', function() {
 
 	});
 
+	it('can check if the Design Documents have been defined', function(done) {
+		when(database.checkDesignDocs(), function(results) {
+			console.log(JSON.stringify(results, undefined, 2));
+			done();
+		}, function(error) {
+			done(error);
+		});
+	});
+
+	it.only('can check if the Design Documents have been defined and create them if they do not exist', function(done) {
+		when(database.checkDesignDocs(true), function(results) {
+			console.log(JSON.stringify(results, undefined, 2));
+			done();
+		}, function(error) {
+			done(error);
+		});
+	});
+
 });

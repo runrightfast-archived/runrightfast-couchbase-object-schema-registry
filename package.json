@@ -10,8 +10,8 @@
 	"scripts":{
 		"blanket":{
 			"pattern":[
-				"lib/object-schema-registry-database.jsXX",
-				"lib/object-schema-registry-service.jsXX"
+				"lib/object-schema-registry-database.js",
+				"lib/object-schema-registry-service.js"
 			]
 		}		
 	},
@@ -20,9 +20,9 @@
 	"dependencies":{
 		"lodash":"2.2.x",
 		"hoek":"1.1.x",
-		"runrightfast-commons":"git://github.com/runrightfast/runrightfast-commons.git#0.0.12",
+		"runrightfast-commons":"git://github.com/runrightfast/runrightfast-commons.git#0.0.14",
 		"runrightfast-couchbase":"git://github.com/runrightfast/runrightfast-couchbase.git#0.0.5",
-		"runrightfast-validator":"git://github.com/runrightfast/runrightfast-validator.git#0.0.6",
+		"runrightfast-validator":"git://github.com/runrightfast/runrightfast-validator.git#0.0.7",
 		"rest":"1.0.x",
 		"log4js":"0.6.x",
 		"hawk":"1.1.x",

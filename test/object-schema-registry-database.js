@@ -20,6 +20,7 @@ var cbConnManager = require('runrightfast-couchbase').couchbaseConnectionManager
 var ObjectSchemaRegistryDatabase = require('..').ObjectSchemaRegistryDatabase;
 var ObjectSchema = require('runrightfast-validator').validatorDomain.ObjectSchema;
 var when = require('when');
+var uuid = require('uuid');
 
 describe('database', function() {
 	var database = null;
@@ -59,7 +60,8 @@ describe('database', function() {
 			idsToDelete = {};
 			done();
 		}, function(error) {
-			done(error);
+			console.error(JSON.stringify(error, undefined, 2));
+			done(error.error);
 		});
 
 	});
@@ -102,7 +104,44 @@ describe('database', function() {
 		});
 	});
 
-	it('can create a get an ObjectSchema from the database', function(done) {
+	it('create will fail if ObjectSchema fails validation', function(done) {
+		database.createObjectSchema({}).then(function(result) {
+			done(new Error('expected create to fail because of validation error'));
+		}, function(err) {
+			console.log(err);
+			done();
+		});
+	});
+
+	it('create a new ObjectSchema in the database with the same id will fail', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema = new ObjectSchema(options);
+		idsToDelete[schema.namespace] = schema.version;
+		database.createObjectSchema(schema).then(function(result) {
+			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
+			try {
+				expect(result.cas).to.exist;
+				expect(result.schema instanceof ObjectSchema).to.equal(true);
+
+				database.createObjectSchema(schema).otherwise(function(error) {
+					done();
+				});
+
+			} catch (err) {
+				done(err);
+			}
+
+		}, function(err) {
+			done(error);
+		});
+	});
+
+	it('can get an ObjectSchema from the database', function(done) {
 		var options = {
 			namespace : 'ns://runrightfast.co/couchbase',
 			version : '1.0.0',
@@ -124,13 +163,230 @@ describe('database', function() {
 					expect(retrievedSchema).to.exist;
 					expect(retrievedSchemaCAS).to.exist;
 					expect(retrievedSchema.id).to.equal(result.schema.id);
+					done();
 				}, function(err) {
+					done(err);
 				});
 
-				done();
 			} catch (err) {
 				done(err);
 			}
+
+		}, function(err) {
+			done(error);
+		});
+	});
+
+	it('getting an ObjectSchema from the database for an invalid id will return an error', function(done) {
+		when(database.getObjectSchema('ns://' + uuid.v4(), '0.0.1'), function(result) {
+			done(new Error('expected an error because the doc should not exist'));
+		}, function(err) {
+			expect(err.code).to.equal('NOT_FOUND');
+			done();
+		});
+	});
+
+	it('can update an ObjectSchema from the database', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema = new ObjectSchema(options);
+		idsToDelete[schema.namespace] = schema.version;
+		database.createObjectSchema(schema).then(function(result) {
+			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
+			try {
+				expect(result.cas).to.exist;
+				expect(result.schema instanceof ObjectSchema).to.equal(true);
+
+				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+					console.log('(getObjectSchema() result:\n' + JSON.stringify(result, undefined, 2));
+					var retrievedSchema = result.schema;
+					var retrievedSchemaCAS = result.cas;
+					expect(retrievedSchema).to.exist;
+					expect(retrievedSchemaCAS).to.exist;
+					expect(retrievedSchema.id).to.equal(result.schema.id);
+
+					result.schema.description = 'test : can update an ObjectSchema from the database';
+					when(database.updateObjectSchema(result.schema, result.cas, 'azappala'), function(result) {
+						console.log('(getObjectSchema() result after update:\n' + JSON.stringify(result, undefined, 2));
+						var retrievedSchema2 = result.schema;
+						var retrievedSchemaCAS2 = result.cas;
+
+						try {
+							expect(retrievedSchemaCAS).to.not.equal(retrievedSchemaCAS2);
+							expect(retrievedSchema2.updatedOn.getTime() > retrievedSchema.updatedOn.getTime()).to.equal(true);
+							expect(retrievedSchema2.updatedBy).to.equal('azappala');
+							done();
+						} catch (err) {
+							done(err);
+						}
+					}, function(err) {
+						done(err);
+					});
+
+				}, function(err) {
+					done(err);
+				});
+
+			} catch (err) {
+				done(err);
+			}
+
+		}, function(err) {
+			done(error);
+		});
+	});
+
+	it('updating will fail for an invalid ObjectSchema', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema = new ObjectSchema(options);
+		idsToDelete[schema.namespace] = schema.version;
+		database.createObjectSchema(schema).then(function(result) {
+			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
+			try {
+				expect(result.cas).to.exist;
+				expect(result.schema instanceof ObjectSchema).to.equal(true);
+
+				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+					console.log('(getObjectSchema() result:\n' + JSON.stringify(result, undefined, 2));
+					var retrievedSchema = result.schema;
+					var retrievedSchemaCAS = result.cas;
+					expect(retrievedSchema).to.exist;
+					expect(retrievedSchemaCAS).to.exist;
+					expect(retrievedSchema.id).to.equal(result.schema.id);
+
+					result.schema.description = 'test : can update an ObjectSchema from the database';
+					when(database.updateObjectSchema({}, result.cas, 'azappala'), function(result) {
+						done(new Error('Expected update to fail'));
+					}, function(err) {
+						console.log(err);
+						done();
+					});
+
+				}, function(err) {
+					done(err);
+				});
+
+			} catch (err) {
+				done(err);
+			}
+
+		}, function(err) {
+			done(error);
+		});
+	});
+
+	it('updating an ObjectSchema from the database with an expired CAS should fail', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema = new ObjectSchema(options);
+		idsToDelete[schema.namespace] = schema.version;
+		database.createObjectSchema(schema).then(function(result) {
+			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
+			try {
+				expect(result.cas).to.exist;
+				expect(result.schema instanceof ObjectSchema).to.equal(true);
+
+				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+					console.log('(getObjectSchema() result:\n' + JSON.stringify(result, undefined, 2));
+					var retrievedSchema = result.schema;
+					var retrievedSchemaCAS = result.cas;
+					expect(retrievedSchema).to.exist;
+					expect(retrievedSchemaCAS).to.exist;
+					expect(retrievedSchema.id).to.equal(result.schema.id);
+
+					result.schema.description = 'test : can update an ObjectSchema from the database';
+					return when(database.updateObjectSchema(retrievedSchema, retrievedSchemaCAS, 'azappala'), function(result) {
+						console.log('(getObjectSchema() result after update:\n' + JSON.stringify(result, undefined, 2));
+						var retrievedSchema2 = result.schema;
+						var retrievedSchemaCAS2 = result.cas;
+
+						expect(retrievedSchemaCAS).to.not.equal(retrievedSchemaCAS2);
+						expect(retrievedSchema2.updatedOn.getTime() > retrievedSchema.updatedOn.getTime()).to.equal(true);
+						expect(retrievedSchema2.updatedBy).to.equal('azappala');
+
+						return result;
+					}, function(err) {
+						return err;
+					}).then(function(result) {
+						when(database.updateObjectSchema(retrievedSchema, retrievedSchemaCAS, 'azappala'), function(result) {
+							done(new Error('Expected an error because the CAS should be expired'));
+						}, function(error) {
+							console.log(error);
+							done();
+						});
+
+					}, function(error) {
+						done(error);
+					});
+
+				}, function(err) {
+					done(err);
+				});
+
+			} catch (err) {
+				done(err);
+			}
+
+		}, function(err) {
+			done(error);
+		});
+	});
+
+	it('can delete an ObjectSchema from the database', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema = new ObjectSchema(options);
+		idsToDelete[schema.namespace] = schema.version;
+		database.createObjectSchema(schema).then(function(result) {
+			console.log(JSON.stringify(result, undefined, 2));
+
+			expect(result.cas).to.exist;
+			expect(result.schema instanceof ObjectSchema).to.equal(true);
+
+			var namespace = result.schema.namespace;
+			var version = result.schema.version;
+
+			var removePromise_1 = when(database.deleteObjectSchema(namespace, version), function(result) {
+				return result;
+			}, function(err) {
+				return err;
+			});
+
+			var removePromise_2 = when(removePromise_1, function(result) {
+				console.log('delete result #1 : ' + JSON.stringify(result, undefined, 2));
+
+				return when(database.deleteObjectSchema(namespace, version), function(result) {
+					console.log('delete result2 : ' + JSON.stringify(result, undefined, 2));
+					return result;
+				}, function(error) {
+					return error;
+				});
+			}, function(error) {
+				return error;
+			});
+
+			when(removePromise_2, function(result) {
+				done();
+			}, function(error) {
+				done(error);
+			});
 
 		}, function(err) {
 			done(error);

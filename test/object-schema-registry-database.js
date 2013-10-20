@@ -21,11 +21,14 @@ var ObjectSchemaRegistryDatabase = require('..').ObjectSchemaRegistryDatabase;
 var ObjectSchema = require('runrightfast-validator').validatorDomain.ObjectSchema;
 var when = require('when');
 var uuid = require('uuid');
+var lodash = require('lodash');
+
+var objectSchemaId = require('runrightfast-validator').validatorDomain.objectSchemaId;
 
 describe('database', function() {
 	var database = null;
 
-	var idsToDelete = {};
+	var idsToDelete = [];
 
 	before(function(done) {
 
@@ -55,9 +58,9 @@ describe('database', function() {
 	});
 
 	afterEach(function(done) {
-		database.deleteMultiObjectSchema(idsToDelete).then(function(result) {
+		database.deleteObjectSchemas(idsToDelete).then(function(result) {
 			console.log(JSON.stringify(result, undefined, 2));
-			idsToDelete = {};
+			idsToDelete = [];
 			done();
 		}, function(error) {
 			console.error(JSON.stringify(error, undefined, 2));
@@ -67,11 +70,11 @@ describe('database', function() {
 	});
 
 	after(function(done) {
-		database.deleteMultiObjectSchema(idsToDelete).then(function(result) {
+		database.deleteObjectSchemas(idsToDelete).then(function(result) {
 			console.log(JSON.stringify(result, undefined, 2));
 			cbConnManager.stop(function() {
 				cbConnManager.clear();
-				idsToDelete = {};
+				idsToDelete = [];
 				done();
 			});
 		}, function(error) {
@@ -88,7 +91,7 @@ describe('database', function() {
 		};
 
 		var schema = new ObjectSchema(options);
-		idsToDelete[schema.namespace] = schema.version;
+		idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
 		database.createObjectSchema(schema).then(function(result) {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
@@ -121,7 +124,7 @@ describe('database', function() {
 		};
 
 		var schema = new ObjectSchema(options);
-		idsToDelete[schema.namespace] = schema.version;
+		idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
 		database.createObjectSchema(schema).then(function(result) {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
@@ -149,7 +152,7 @@ describe('database', function() {
 		};
 
 		var schema = new ObjectSchema(options);
-		idsToDelete[schema.namespace] = schema.version;
+		idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
 		database.createObjectSchema(schema).then(function(result) {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
@@ -194,7 +197,7 @@ describe('database', function() {
 		};
 
 		var schema = new ObjectSchema(options);
-		idsToDelete[schema.namespace] = schema.version;
+		idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
 		database.createObjectSchema(schema).then(function(result) {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
@@ -248,7 +251,7 @@ describe('database', function() {
 		};
 
 		var schema = new ObjectSchema(options);
-		idsToDelete[schema.namespace] = schema.version;
+		idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
 		database.createObjectSchema(schema).then(function(result) {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
@@ -292,7 +295,7 @@ describe('database', function() {
 		};
 
 		var schema = new ObjectSchema(options);
-		idsToDelete[schema.namespace] = schema.version;
+		idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
 		database.createObjectSchema(schema).then(function(result) {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
@@ -353,7 +356,7 @@ describe('database', function() {
 		};
 
 		var schema = new ObjectSchema(options);
-		idsToDelete[schema.namespace] = schema.version;
+		idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
 		database.createObjectSchema(schema).then(function(result) {
 			console.log(JSON.stringify(result, undefined, 2));
 
@@ -391,6 +394,62 @@ describe('database', function() {
 		}, function(err) {
 			done(error);
 		});
+	});
+
+	it('can retrieve multiple ObjectSchemas from the database at once', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema1 = new ObjectSchema(options);
+		idsToDelete.push(objectSchemaId(schema1.namespace, schema1.version));
+
+		options.namespace = 'ns://runrightfast.co/couchbase/config';
+		options.version = '1.0.1';
+		var schema2 = new ObjectSchema(options);
+		idsToDelete.push(objectSchemaId(schema2.namespace, schema2.version));
+
+		var creates = [];
+
+		creates.push(when(database.createObjectSchema(schema1), function(result) {
+			console.log(JSON.stringify(result, undefined, 2));
+			return result;
+		}, function(error) {
+			return error;
+		}));
+
+		creates.push(when(database.createObjectSchema(schema2), function(result) {
+			console.log(JSON.stringify(result, undefined, 2));
+			return result;
+		}, function(error) {
+			return error;
+		}));
+
+		when(when.all(creates), function(results) {
+			console.log(JSON.stringify(results, undefined, 2));
+
+			try {
+				var ids = lodash.map(results, function(result) {
+					return objectSchemaId(result.schema.namespace, result.schema.version);
+				});
+
+				console.log(JSON.stringify(ids, undefined, 2));
+
+				database.getObjectSchemas(ids).then(function(result) {
+					console.log(JSON.stringify(result, undefined, 2));
+					done();
+				}, function(error) {
+					done(error);
+				});
+			} catch (error) {
+				done(error);
+			}
+		}, function(error) {
+			done(error);
+		});
+
 	});
 
 });

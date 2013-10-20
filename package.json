@@ -10,7 +10,7 @@
 	"scripts":{
 		"blanket":{
 			"pattern":[
-				"lib/object-schema-registry-database.js",
+				"lib/object-schema-registry-database.jsXXX",
 				"lib/object-schema-registry-service.js"
 			]
 		}		
@@ -29,7 +29,8 @@
 		"extend":"1.2.x",
 		"uuid":"1.4.x",
 		"couchbase":"1.0.x",
-		"when":"2.5.x"
+		"when":"2.5.x",
+		"joi":"1.2.x"
 	},
 	"devDependencies":{
 		"grunt":"~0.4.1",

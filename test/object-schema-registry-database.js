@@ -469,10 +469,13 @@ describe('database', function() {
 	});
 
 	describe('has query functionality', function() {
+		var idsToDelete = [];
 		var schemas = [];
 
 		before(function(done) {
 			this.timeout(1000 * 10);
+
+			var now = Date.now();
 			for ( var i = 0; i < 10; i++) {
 				schemas.push(new ObjectSchema({
 					namespace : 'ns://runrightfast.co/schema1',
@@ -484,6 +487,13 @@ describe('database', function() {
 					namespace : 'ns://runrightfast.co/schema2',
 					version : '2.0.' + i,
 					description : 'Schema #2'
+				}));
+
+				schemas.push(new ObjectSchema({
+					namespace : 'ns://runrightfast.co/schema3',
+					version : i + '.0.' + i,
+					description : 'Schema #1',
+					createdOn : new Date(now + (1000 * 60 * 60 * 24 * i))
 				}));
 			}
 
@@ -513,12 +523,12 @@ describe('database', function() {
 				 * will not be available to query until they have been written
 				 * to disk.
 				 */
-				setTimeout(done, 5100);
+				setTimeout(done, 5200);
 			});
 
 		});
 
-		after(function(done) {
+		 after(function(done) {
 			database.deleteObjectSchemas(idsToDelete).then(function(result) {
 				idsToDelete = [];
 				done();
@@ -526,7 +536,6 @@ describe('database', function() {
 				console.error(JSON.stringify(error, undefined, 2));
 				done(error.error);
 			});
-
 		});
 
 		it('can query for namespace versions', function(done) {
@@ -560,6 +569,46 @@ describe('database', function() {
 			}, function(error) {
 				done(error);
 			});
+		});
+
+		it('can query by createdOn and retrieves the first 20 records by default', function(done) {
+			when(database.getObjectSchemasByCreatedOn(), function(result) {
+				console.log('query results: ' + JSON.stringify(result, undefined, 2));
+				try {
+					expect(result.length).to.equal(20);
+					done();
+				} catch (err) {
+					done(err);
+				}
+
+			}, function(error) {
+				done(error);
+			});
+		});
+
+		it('can query by createdOn and filter on a date range', function(done) {
+			var now = Date.now();
+			var queryOptions = {
+				from : new Date(now + (1000 * 60 * 60 * 24)),
+				to : new Date(now + (1000 * 60 * 60 * 24 * 5))
+			};
+			when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
+				console.log('result.length = ' + result.length);
+				console.log('query results: ' + JSON.stringify(result, undefined, 2));
+				try {
+					expect(result.length).to.equal(4);
+					done();
+				} catch (err) {
+					done(err);
+				}
+
+			}, function(error) {
+				done(error);
+			});
+		});
+
+		it.skip('can query by createdOn and page through results', function(done) {
+
 		});
 	});
 

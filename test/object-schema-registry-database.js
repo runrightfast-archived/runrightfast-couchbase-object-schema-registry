@@ -59,7 +59,6 @@ describe('database', function() {
 
 	afterEach(function(done) {
 		database.deleteObjectSchemas(idsToDelete).then(function(result) {
-			console.log(JSON.stringify(result, undefined, 2));
 			idsToDelete = [];
 			done();
 		}, function(error) {
@@ -71,7 +70,6 @@ describe('database', function() {
 
 	after(function(done) {
 		database.deleteObjectSchemas(idsToDelete).then(function(result) {
-			console.log(JSON.stringify(result, undefined, 2));
 			cbConnManager.stop(function() {
 				cbConnManager.clear();
 				idsToDelete = [];
@@ -461,12 +459,107 @@ describe('database', function() {
 		});
 	});
 
-	it.only('can check if the Design Documents have been defined and create them if they do not exist', function(done) {
+	it('can check if the Design Documents have been defined and create them if they do not exist', function(done) {
 		when(database.checkDesignDocs(true), function(results) {
 			console.log(JSON.stringify(results, undefined, 2));
 			done();
 		}, function(error) {
 			done(error);
+		});
+	});
+
+	describe('has query functionality', function() {
+		var schemas = [];
+
+		before(function(done) {
+			this.timeout(1000 * 10);
+			for ( var i = 0; i < 10; i++) {
+				schemas.push(new ObjectSchema({
+					namespace : 'ns://runrightfast.co/schema1',
+					version : '1.0.' + i,
+					description : 'Schema #1'
+				}));
+
+				schemas.push(new ObjectSchema({
+					namespace : 'ns://runrightfast.co/schema2',
+					version : '2.0.' + i,
+					description : 'Schema #2'
+				}));
+			}
+
+			lodash.forEach(schemas, function(schema) {
+				idsToDelete.push(objectSchemaId(schema.namespace, schema.version));
+			});
+
+			var promises = lodash.map(schemas, function(schema) {
+				return when(database.createObjectSchema(schema), function(result) {
+					return result;
+				}, function(error) {
+					return error;
+				});
+			});
+
+			// ensure design docs have been created
+			promises.push(when(database.checkDesignDocs(true), function(results) {
+				console.log(JSON.stringify(results, undefined, 2));
+			}, function(error) {
+				done(error);
+			}));
+
+			when(when.all(promises), function(results) {
+				console.log('All schemas have been created: ' + schemas.length);
+				/*
+				 * By default, docs get persisted to disk every 5 seconds. Docs
+				 * will not be available to query until they have been written
+				 * to disk.
+				 */
+				setTimeout(done, 5100);
+			});
+
+		});
+
+		after(function(done) {
+			database.deleteObjectSchemas(idsToDelete).then(function(result) {
+				idsToDelete = [];
+				done();
+			}, function(error) {
+				console.error(JSON.stringify(error, undefined, 2));
+				done(error.error);
+			});
+
+		});
+
+		it('can query for namespace versions', function(done) {
+			when(database.getObjectSchemaVersions('ns://runrightfast.co/schema1'), function(result) {
+				console.log('query results: ' + JSON.stringify(result, undefined, 2));
+				try {
+					expect(result.length).to.equal(10);
+
+					var expectedVersions = lodash.filter(schemas, function(schema) {
+						return schema.namespace === 'ns://runrightfast.co/schema1';
+					}).map(function(schema) {
+						return schema.version;
+					});
+
+					expect(lodash.difference(expectedVersions, result).length).to.equal(0);
+
+					done();
+				} catch (err) {
+					done(err);
+				}
+			}, function(error) {
+				done(error);
+			});
+
+		});
+
+		it('can query for namespaces and version counts', function(done) {
+			when(database.getObjectSchemaNamespaces(), function(result) {
+				console.log('query results: ' + JSON.stringify(result, undefined, 2));
+				done();
+			}, function(error) {
+				done(error);
+			});
 		});
 	});
 

@@ -105,6 +105,15 @@ describe('database', function() {
 		});
 	});
 
+	it('#createObjectSchema validates ObjectSchema arg', function(done) {
+		database.createObjectSchema().then(function(result) {
+			done(new Error('expected validation error'));
+		}, function(err) {
+			console.log(err);
+			done();
+		});
+	});
+
 	it('create will fail if ObjectSchema fails validation', function(done) {
 		database.createObjectSchema({}).then(function(result) {
 			done(new Error('expected create to fail because of validation error'));
@@ -183,6 +192,42 @@ describe('database', function() {
 			done(new Error('expected an error because the doc should not exist'));
 		}, function(err) {
 			expect(err.code).to.equal('NOT_FOUND');
+			done();
+		});
+	});
+
+	it('#getObjectSchema validates its args', function(done) {
+		when(database.getObjectSchema('invalid namespace format', '0.0.1'), function(result) {
+			done(new Error('expected validation error'));
+		}, function(err) {
+			console.log(err);
+			done();
+		});
+	});
+
+	it('#getObjectSchema validates its args', function(done) {
+		when(database.updateObjectSchema(null, null, 'azappala'), function(result) {
+			done(new Error('expected validation error'));
+		}, function(err) {
+			console.log(err);
+			done();
+		});
+	});
+
+	it('#deleteObjectSchema validates its args', function(done) {
+		when(database.deleteObjectSchema(), function(result) {
+			done(new Error('expected validation error'));
+		}, function(err) {
+			console.log(err);
+			done();
+		});
+	});
+
+	it('#getObjectSchemaVersions validates its args', function(done) {
+		when(database.getObjectSchemaVersions(), function(result) {
+			done(new Error('expected validation error'));
+		}, function(err) {
+			console.log(err);
 			done();
 		});
 	});
@@ -450,6 +495,75 @@ describe('database', function() {
 
 	});
 
+	it('can retrieve multiple ObjectSchemas from the database at once', function(done) {
+		var options = {
+			namespace : 'ns://runrightfast.co/couchbase',
+			version : '1.0.0',
+			description : 'Couchbase config schema'
+		};
+
+		var schema1 = new ObjectSchema(options);
+		idsToDelete.push(objectSchemaId(schema1.namespace, schema1.version));
+
+		options.namespace = 'ns://runrightfast.co/couchbase/config';
+		options.version = '1.0.1';
+		var schema2 = new ObjectSchema(options);
+		idsToDelete.push(objectSchemaId(schema2.namespace, schema2.version));
+
+		var creates = [];
+
+		creates.push(when(database.createObjectSchema(schema1), function(result) {
+			console.log(JSON.stringify(result, undefined, 2));
+			return result;
+		}, function(error) {
+			return error;
+		}));
+
+		creates.push(when(database.createObjectSchema(schema2), function(result) {
+			console.log(JSON.stringify(result, undefined, 2));
+			return result;
+		}, function(error) {
+			return error;
+		}));
+
+		when(when.all(creates), function(results) {
+			console.log(JSON.stringify(results, undefined, 2));
+
+			try {
+				var ids = lodash.map(results, function(result) {
+					return objectSchemaId(result.value.namespace, result.value.version);
+				});
+
+				ids.push(objectSchemaId('ns://non-existent', '0.0.0'));
+
+				console.log(JSON.stringify(ids, undefined, 2));
+
+				database.getObjectSchemas(ids).then(function(result) {
+					console.log(JSON.stringify(result, undefined, 2));
+					expect(lodash.keys(result).length).to.equal(2);
+					done();
+				}, function(error) {
+					done(error);
+				});
+			} catch (error) {
+				done(error);
+			}
+		}, function(error) {
+			done(error);
+		});
+
+	});
+
+	it('#getObjectSchemas validates that ids is an Array of Strings', function(done) {
+		database.getObjectSchemas([ 1, 2 ]).then(function(result) {
+			done(new Error('expected validation error'));
+		}, function(error) {
+			console.log(error);
+			done();
+		});
+
+	});
+
 	it('can check if the Design Documents have been defined', function(done) {
 		when(database.checkDesignDocs(), function(results) {
 			console.log(JSON.stringify(results, undefined, 2));
@@ -493,7 +607,8 @@ describe('database', function() {
 					namespace : 'ns://runrightfast.co/schema3',
 					version : i + '.0.' + i,
 					description : 'Schema #1',
-					createdOn : new Date(now + (1000 * 60 * 60 * 24 * i))
+					createdOn : new Date(now + (1000 * 60 * 60 * 24 * i)),
+					updatedOn : new Date(now + (1000 * 60 * 60 * 24 * i))
 				}));
 			}
 
@@ -510,7 +625,7 @@ describe('database', function() {
 			});
 
 			// ensure design docs have been created
-			promises.push(when(database.checkDesignDocs(true), function(results) {
+			promises.push(when(database.checkDesignDocs(true, true), function(results) {
 				console.log(JSON.stringify(results, undefined, 2));
 			}, function(error) {
 				done(error);
@@ -535,6 +650,24 @@ describe('database', function() {
 			}, function(error) {
 				console.error(JSON.stringify(error, undefined, 2));
 				done(error.error);
+			});
+		});
+
+		it('#checkDesignDocs validates create arg is a Boolean if specified', function(done) {
+			database.checkDesignDocs('', true).then(function(result) {
+				done(new Error('expected validation error'));
+			}, function(err) {
+				console.log(err);
+				done();
+			});
+		});
+
+		it('#checkDesignDocs validates replace arg is a Boolean if specified', function(done) {
+			database.checkDesignDocs(true, '').then(function(result) {
+				done(new Error('expected validation error'));
+			}, function(err) {
+				console.log(err);
+				done();
 			});
 		});
 
@@ -571,135 +704,300 @@ describe('database', function() {
 			});
 		});
 
-		it('can query by createdOn and retrieves the first 20 records by default', function(done) {
-			when(database.getObjectSchemasByCreatedOn(), function(result) {
-				console.log('query results: ' + JSON.stringify(result, undefined, 2));
-				try {
-					expect(result.length).to.equal(20);
-					done();
-				} catch (err) {
-					done(err);
-				}
+		describe('#getObjectSchemasByCreatedOn enables querying on createdOn', function() {
 
-			}, function(error) {
-				done(error);
-			});
-		});
-
-		it('can query by createdOn and retrieves the first 20 ObjectSchemas by default', function(done) {
-			when(database.getObjectSchemasByCreatedOn({
-				returnDocs : true
-			}), function(result) {
-				console.log('query results: ' + JSON.stringify(result, undefined, 2));
-				try {
+			it('can query by createdOn and retrieves the first 20 records by default', function(done) {
+				when(database.getObjectSchemasByCreatedOn(), function(result) {
+					console.log('query results: ' + JSON.stringify(result, undefined, 2));
 					try {
 						expect(result.length).to.equal(20);
-						result.forEach(function(record) {
-							expect(record.value instanceof ObjectSchema).to.equal(true);
-						});
 						done();
 					} catch (err) {
 						done(err);
 					}
-				} catch (err) {
-					done(err);
-				}
 
-			}, function(error) {
-				done(error);
+				}, function(error) {
+					done(error);
+				});
 			});
-		});
 
-		it('can query by createdOn and filter on a date range', function(done) {
-			var now = Date.now();
-			var queryOptions = {
-				from : new Date(now + (1000 * 60 * 60 * 24)),
-				to : new Date(now + (1000 * 60 * 60 * 24 * 5))
-			};
-			when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
-				console.log('result.length = ' + result.length);
-				console.log('query results: ' + JSON.stringify(result, undefined, 2));
-				try {
-					expect(result.length).to.equal(4);
+			it('can query by createdOn and retrieves the first 20 ObjectSchemas by default', function(done) {
+				when(database.getObjectSchemasByCreatedOn({
+					returnDocs : true
+				}), function(result) {
+					console.log('query results: ' + JSON.stringify(result, undefined, 2));
+					try {
+						try {
+							expect(result.length).to.equal(20);
+							result.forEach(function(record) {
+								expect(record.value instanceof ObjectSchema).to.equal(true);
+							});
+							done();
+						} catch (err) {
+							done(err);
+						}
+					} catch (err) {
+						done(err);
+					}
+
+				}, function(error) {
+					done(error);
+				});
+			});
+
+			it('can query by createdOn and filter on a date range', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					from : new Date(now + (1000 * 60 * 60 * 24)),
+					to : new Date(now + (1000 * 60 * 60 * 24 * 5))
+				};
+				when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
+					console.log('result.length = ' + result.length);
+					console.log('query results: ' + JSON.stringify(result, undefined, 2));
+					try {
+						expect(result.length).to.equal(4);
+						done();
+					} catch (err) {
+						done(err);
+					}
+
+				}, function(error) {
+					done(error);
+				});
+			});
+
+			it('#getObjectSchemasByCreatedOn validates that that date range values are Date objects', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					from : 'NOT A DATE OBJECT',
+					to : {}
+				};
+				when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
+					done(new Error('Expected validation error'));
+				}, function(error) {
+					console.log(error);
 					done();
-				} catch (err) {
-					done(err);
+				});
+			});
+
+			it('can query by createdOn and page through results using skip', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					limit : 5,
+					skip : 0
+				};
+
+				var docCount = 0;
+
+				var nextPage = function(queryOptions) {
+					return when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
+						docCount += result.length;
+						console.log('docCount = ' + docCount);
+						console.log('result.length = ' + result.length);
+						console.log('query results: ' + JSON.stringify(result, undefined, 2));
+						return result;
+					}, function(error) {
+						done(error);
+					});
+				};
+
+				var pages = [];
+				for ( var i = 0; i < 5; i++) {
+					queryOptions.skip += 5;
+					pages.push(nextPage(queryOptions));
 				}
 
-			}, function(error) {
-				done(error);
-			});
-		});
-
-		it('can query by createdOn and page through results using skip', function(done) {
-			var now = Date.now();
-			var queryOptions = {
-				limit : 5,
-				skip : 0
-			};
-
-			var docCount = 0;
-
-			var nextPage = function(queryOptions) {
-				return when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
-					docCount += result.length;
-					console.log('docCount = ' + docCount);
-					console.log('result.length = ' + result.length);
-					console.log('query results: ' + JSON.stringify(result, undefined, 2));
-					return result;
+				when(when.all(pages), function(result) {
+					done();
 				}, function(error) {
 					done(error);
 				});
-			};
 
-			var pages = [];
-			for ( var i = 0; i < 5; i++) {
-				queryOptions.skip += 5;
-				pages.push(nextPage(queryOptions));
-			}
-
-			when(when.all(pages), function(result) {
-				done();
-			}, function(error) {
-				done(error);
 			});
 
+			it('can query by createdOn and page through results using skip and startkey_docid', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					limit : 5,
+					skip : 0
+				};
+
+				var docCount = 0;
+
+				var nextPage = function(queryOptions) {
+					return when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
+						docCount += result.length;
+						console.log('docCount = ' + docCount);
+						console.log('result.length = ' + result.length);
+						console.log('query results: ' + JSON.stringify(result, undefined, 2));
+						return result;
+					}, function(error) {
+						done(error);
+					});
+				};
+
+				var firstPage = nextPage(queryOptions);
+
+				when(firstPage, function(result) {
+					queryOptions.startDocId = result[result.length - 1].id;
+					return nextPage(queryOptions);
+				}, function(err) {
+					done(err);
+				}).then(function(result) {
+					done();
+				}, function(err) {
+					done(err);
+				});
+
+			});
 		});
 
-		it('can query by createdOn and page through results using skip and startkey_docid', function(done) {
-			var now = Date.now();
-			var queryOptions = {
-				limit : 5,
-				skip : 0
-			};
+		describe('#getObjectSchemasByUpdatedOn enable querying on updatedOn', function() {
 
-			var docCount = 0;
+			it('#getObjectSchemasByUpdatedOn validates that that date range values are Date objects', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					from : {},
+					to : ''
+				};
+				when(database.getObjectSchemasByUpdatedOn(queryOptions), function(result) {
+					done(new Error('Expected validation error'));
+				}, function(error) {
+					console.log(error);
+					done();
+				});
+			});
 
-			var nextPage = function(queryOptions) {
-				return when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
-					docCount += result.length;
-					console.log('docCount = ' + docCount);
-					console.log('result.length = ' + result.length);
+			it('can query by updatedOn and retrieves the first 20 records by default', function(done) {
+				when(database.getObjectSchemasByUpdatedOn(), function(result) {
 					console.log('query results: ' + JSON.stringify(result, undefined, 2));
-					return result;
+					try {
+						expect(result.length).to.equal(20);
+						done();
+					} catch (err) {
+						done(err);
+					}
+
 				}, function(error) {
 					done(error);
 				});
-			};
-
-			var firstPage = nextPage(queryOptions);
-
-			when(firstPage, function(result) {
-				queryOptions.startDocId = result[result.length - 1].id;
-				return nextPage(queryOptions);
-			}, function(err) {
-				done(err);
-			}).then(function(result) {
-				done();
-			}, function(err) {
-				done(err);
 			});
 
+			it('can query by updatedOn and retrieves the first 20 ObjectSchemas by default', function(done) {
+				when(database.getObjectSchemasByUpdatedOn({
+					returnDocs : true
+				}), function(result) {
+					console.log('query results: ' + JSON.stringify(result, undefined, 2));
+					try {
+						try {
+							expect(result.length).to.equal(20);
+							result.forEach(function(record) {
+								expect(record.value instanceof ObjectSchema).to.equal(true);
+							});
+							done();
+						} catch (err) {
+							done(err);
+						}
+					} catch (err) {
+						done(err);
+					}
+
+				}, function(error) {
+					done(error);
+				});
+			});
+
+			it('can query by updatedOn and filter on a date range', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					from : new Date(now + (1000 * 60 * 60 * 24)),
+					to : new Date(now + (1000 * 60 * 60 * 24 * 5))
+				};
+				when(database.getObjectSchemasByUpdatedOn(queryOptions), function(result) {
+					console.log('result.length = ' + result.length);
+					console.log('query results: ' + JSON.stringify(result, undefined, 2));
+					try {
+						expect(result.length).to.equal(4);
+						done();
+					} catch (err) {
+						done(err);
+					}
+
+				}, function(error) {
+					done(error);
+				});
+			});
+
+			it('can query by updatedOn and page through results using skip', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					limit : 5,
+					skip : 0
+				};
+
+				var docCount = 0;
+
+				var nextPage = function(queryOptions) {
+					return when(database.getObjectSchemasByUpdatedOn(queryOptions), function(result) {
+						docCount += result.length;
+						console.log('docCount = ' + docCount);
+						console.log('result.length = ' + result.length);
+						console.log('query results: ' + JSON.stringify(result, undefined, 2));
+						return result;
+					}, function(error) {
+						done(error);
+					});
+				};
+
+				var pages = [];
+				for ( var i = 0; i < 5; i++) {
+					queryOptions.skip += 5;
+					pages.push(nextPage(queryOptions));
+				}
+
+				when(when.all(pages), function(result) {
+					done();
+				}, function(error) {
+					done(error);
+				});
+
+			});
+
+			it('can query by updatedOn and page through results using skip and startkey_docid', function(done) {
+				var now = Date.now();
+				var queryOptions = {
+					limit : 5,
+					skip : 0
+				};
+
+				var docCount = 0;
+
+				var nextPage = function(queryOptions) {
+					return when(database.getObjectSchemasByUpdatedOn(queryOptions), function(result) {
+						docCount += result.length;
+						console.log('docCount = ' + docCount);
+						console.log('result.length = ' + result.length);
+						console.log('query results: ' + JSON.stringify(result, undefined, 2));
+						return result;
+					}, function(error) {
+						done(error);
+					});
+				};
+
+				var firstPage = nextPage(queryOptions);
+
+				when(firstPage, function(result) {
+					queryOptions.startDocId = result[result.length - 1].id;
+					return nextPage(queryOptions);
+				}, function(err) {
+					done(err);
+				}).then(function(result) {
+					done();
+				}, function(err) {
+					done(err);
+				});
+
+			});
 		});
 
 	});

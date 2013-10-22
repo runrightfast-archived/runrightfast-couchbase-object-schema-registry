@@ -10,7 +10,7 @@
 	"scripts":{
 		"blanket":{
 			"pattern":[
-				"lib/object-schema-registry-database.jsXXX",
+				"lib/object-schema-registry-database.js",
 				"lib/object-schema-registry-service.js"
 			]
 		}		

@@ -528,7 +528,7 @@ describe('database', function() {
 
 		});
 
-		 after(function(done) {
+		after(function(done) {
 			database.deleteObjectSchemas(idsToDelete).then(function(result) {
 				idsToDelete = [];
 				done();
@@ -607,9 +607,77 @@ describe('database', function() {
 			});
 		});
 
-		it.skip('can query by createdOn and page through results', function(done) {
+		it('can query by createdOn and page through results using skip', function(done) {
+			var now = Date.now();
+			var queryOptions = {
+				limit : 5,
+				skip : 0
+			};
+
+			var docCount = 0;
+
+			var nextPage = function(queryOptions) {
+				return when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
+					docCount += result.length;
+					console.log('docCount = ' + docCount);
+					console.log('result.length = ' + result.length);
+					console.log('query results: ' + JSON.stringify(result, undefined, 2));
+					return result;
+				}, function(error) {
+					done(error);
+				});
+			};
+
+			var pages = [];
+			for ( var i = 0; i < 5; i++) {
+				queryOptions.skip += 5;
+				pages.push(nextPage(queryOptions));
+			}
+
+			when(when.all(pages), function(result) {
+				done();
+			}, function(error) {
+				done(error);
+			});
 
 		});
+
+		it('can query by createdOn and page through results using skip and startkey_docid', function(done) {
+			var now = Date.now();
+			var queryOptions = {
+				limit : 5,
+				skip : 0
+			};
+
+			var docCount = 0;
+
+			var nextPage = function(queryOptions) {
+				return when(database.getObjectSchemasByCreatedOn(queryOptions), function(result) {
+					docCount += result.length;
+					console.log('docCount = ' + docCount);
+					console.log('result.length = ' + result.length);
+					console.log('query results: ' + JSON.stringify(result, undefined, 2));
+					return result;
+				}, function(error) {
+					done(error);
+				});
+			};
+
+			var firstPage = nextPage(queryOptions);
+
+			when(firstPage, function(result) {
+				queryOptions.startDocId = result[result.length - 1].id;
+				return nextPage(queryOptions);
+			}, function(err) {
+				done(err);
+			}).then(function(result) {
+				done();
+			}, function(err) {
+				done(err);
+			});
+
+		});
+
 	});
 
 });

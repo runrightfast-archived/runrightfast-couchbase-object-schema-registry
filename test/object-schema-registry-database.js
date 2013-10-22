@@ -205,7 +205,7 @@ describe('database', function() {
 		});
 	});
 
-	it('#getObjectSchema validates its args', function(done) {
+	it('#updateObjectSchema validates its args', function(done) {
 		when(database.updateObjectSchema(null, null, 'azappala'), function(result) {
 			done(new Error('expected validation error'));
 		}, function(err) {

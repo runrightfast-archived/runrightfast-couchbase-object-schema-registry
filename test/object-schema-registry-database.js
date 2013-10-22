@@ -94,7 +94,7 @@ describe('database', function() {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
 				expect(result.cas).to.exist;
-				expect(result.schema instanceof ObjectSchema).to.equal(true);
+				expect(result.value instanceof ObjectSchema).to.equal(true);
 				done();
 			} catch (err) {
 				done(err);
@@ -127,7 +127,7 @@ describe('database', function() {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
 				expect(result.cas).to.exist;
-				expect(result.schema instanceof ObjectSchema).to.equal(true);
+				expect(result.value instanceof ObjectSchema).to.equal(true);
 
 				database.createObjectSchema(schema).otherwise(function(error) {
 					done();
@@ -155,15 +155,15 @@ describe('database', function() {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
 				expect(result.cas).to.exist;
-				expect(result.schema instanceof ObjectSchema).to.equal(true);
+				expect(result.value instanceof ObjectSchema).to.equal(true);
 
-				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+				when(database.getObjectSchema(result.value.namespace, result.value.version), function(result) {
 					console.log('(getObjectSchema() result : ' + JSON.stringify(result, undefined, 2));
-					var retrievedSchema = result.schema;
+					var retrievedSchema = result.value;
 					var retrievedSchemaCAS = result.cas;
 					expect(retrievedSchema).to.exist;
 					expect(retrievedSchemaCAS).to.exist;
-					expect(retrievedSchema.id).to.equal(result.schema.id);
+					expect(retrievedSchema.id).to.equal(result.value.id);
 					done();
 				}, function(err) {
 					done(err);
@@ -200,20 +200,20 @@ describe('database', function() {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
 				expect(result.cas).to.exist;
-				expect(result.schema instanceof ObjectSchema).to.equal(true);
+				expect(result.value instanceof ObjectSchema).to.equal(true);
 
-				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+				when(database.getObjectSchema(result.value.namespace, result.value.version), function(result) {
 					console.log('(getObjectSchema() result:\n' + JSON.stringify(result, undefined, 2));
-					var retrievedSchema = result.schema;
+					var retrievedSchema = result.value;
 					var retrievedSchemaCAS = result.cas;
 					expect(retrievedSchema).to.exist;
 					expect(retrievedSchemaCAS).to.exist;
-					expect(retrievedSchema.id).to.equal(result.schema.id);
+					expect(retrievedSchema.id).to.equal(result.value.id);
 
-					result.schema.description = 'test : can update an ObjectSchema from the database';
-					when(database.updateObjectSchema(result.schema, result.cas, 'azappala'), function(result) {
+					result.value.description = 'test : can update an ObjectSchema from the database';
+					when(database.updateObjectSchema(result.value, result.cas, 'azappala'), function(result) {
 						console.log('(getObjectSchema() result after update:\n' + JSON.stringify(result, undefined, 2));
-						var retrievedSchema2 = result.schema;
+						var retrievedSchema2 = result.value;
 						var retrievedSchemaCAS2 = result.cas;
 
 						try {
@@ -254,17 +254,17 @@ describe('database', function() {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
 				expect(result.cas).to.exist;
-				expect(result.schema instanceof ObjectSchema).to.equal(true);
+				expect(result.value instanceof ObjectSchema).to.equal(true);
 
-				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+				when(database.getObjectSchema(result.value.namespace, result.value.version), function(result) {
 					console.log('(getObjectSchema() result:\n' + JSON.stringify(result, undefined, 2));
-					var retrievedSchema = result.schema;
+					var retrievedSchema = result.value;
 					var retrievedSchemaCAS = result.cas;
 					expect(retrievedSchema).to.exist;
 					expect(retrievedSchemaCAS).to.exist;
-					expect(retrievedSchema.id).to.equal(result.schema.id);
+					expect(retrievedSchema.id).to.equal(result.value.id);
 
-					result.schema.description = 'test : can update an ObjectSchema from the database';
+					result.value.description = 'test : can update an ObjectSchema from the database';
 					when(database.updateObjectSchema({}, result.cas, 'azappala'), function(result) {
 						done(new Error('Expected update to fail'));
 					}, function(err) {
@@ -298,20 +298,20 @@ describe('database', function() {
 			console.log('(can create a new ObjectSchema in the database) result : ' + JSON.stringify(result, undefined, 2));
 			try {
 				expect(result.cas).to.exist;
-				expect(result.schema instanceof ObjectSchema).to.equal(true);
+				expect(result.value instanceof ObjectSchema).to.equal(true);
 
-				when(database.getObjectSchema(result.schema.namespace, result.schema.version), function(result) {
+				when(database.getObjectSchema(result.value.namespace, result.value.version), function(result) {
 					console.log('(getObjectSchema() result:\n' + JSON.stringify(result, undefined, 2));
-					var retrievedSchema = result.schema;
+					var retrievedSchema = result.value;
 					var retrievedSchemaCAS = result.cas;
 					expect(retrievedSchema).to.exist;
 					expect(retrievedSchemaCAS).to.exist;
-					expect(retrievedSchema.id).to.equal(result.schema.id);
+					expect(retrievedSchema.id).to.equal(result.value.id);
 
-					result.schema.description = 'test : can update an ObjectSchema from the database';
+					result.value.description = 'test : can update an ObjectSchema from the database';
 					return when(database.updateObjectSchema(retrievedSchema, retrievedSchemaCAS, 'azappala'), function(result) {
 						console.log('(getObjectSchema() result after update:\n' + JSON.stringify(result, undefined, 2));
-						var retrievedSchema2 = result.schema;
+						var retrievedSchema2 = result.value;
 						var retrievedSchemaCAS2 = result.cas;
 
 						expect(retrievedSchemaCAS).to.not.equal(retrievedSchemaCAS2);
@@ -359,10 +359,10 @@ describe('database', function() {
 			console.log(JSON.stringify(result, undefined, 2));
 
 			expect(result.cas).to.exist;
-			expect(result.schema instanceof ObjectSchema).to.equal(true);
+			expect(result.value instanceof ObjectSchema).to.equal(true);
 
-			var namespace = result.schema.namespace;
-			var version = result.schema.version;
+			var namespace = result.value.namespace;
+			var version = result.value.version;
 
 			var removePromise_1 = when(database.deleteObjectSchema(namespace, version), function(result) {
 				return result;
@@ -430,7 +430,7 @@ describe('database', function() {
 
 			try {
 				var ids = lodash.map(results, function(result) {
-					return objectSchemaId(result.schema.namespace, result.schema.version);
+					return objectSchemaId(result.value.namespace, result.value.version);
 				});
 
 				console.log(JSON.stringify(ids, undefined, 2));
@@ -577,6 +577,30 @@ describe('database', function() {
 				try {
 					expect(result.length).to.equal(20);
 					done();
+				} catch (err) {
+					done(err);
+				}
+
+			}, function(error) {
+				done(error);
+			});
+		});
+
+		it('can query by createdOn and retrieves the first 20 ObjectSchemas by default', function(done) {
+			when(database.getObjectSchemasByCreatedOn({
+				returnDocs : true
+			}), function(result) {
+				console.log('query results: ' + JSON.stringify(result, undefined, 2));
+				try {
+					try {
+						expect(result.length).to.equal(20);
+						result.forEach(function(record) {
+							expect(record.value instanceof ObjectSchema).to.equal(true);
+						});
+						done();
+					} catch (err) {
+						done(err);
+					}
 				} catch (err) {
 					done(err);
 				}

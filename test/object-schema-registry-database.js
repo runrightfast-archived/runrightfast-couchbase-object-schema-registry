@@ -495,7 +495,7 @@ describe('database', function() {
 
 	});
 
-	it('can retrieve multiple ObjectSchemas from the database at once', function(done) {
+	it('can retrieve multiple ObjectSchemas from the database at once - skipping invalid ids', function(done) {
 		var options = {
 			namespace : 'ns://runrightfast.co/couchbase',
 			version : '1.0.0',

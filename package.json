@@ -1,6 +1,6 @@
 {
 	"name":"runrightfast-couchbase-object-schema-registry",
-	"version":"0.0.2",
+	"version":"0.0.3",
 	"description":"RunRightFast Object Schema Registry Couchbase implementation",
 	"repository":{
 		"type":"git",
@@ -19,15 +19,15 @@
 	"license":"Apache v2",
 	"dependencies":{
 		"lodash":"2.2.x",
-		"hoek":"1.1.x",
-		"runrightfast-commons":"git://github.com/runrightfast/runrightfast-commons.git#0.0.14",
-		"runrightfast-couchbase":"git://github.com/runrightfast/runrightfast-couchbase.git#0.0.7",
-		"runrightfast-validator":"git://github.com/runrightfast/runrightfast-validator.git#0.0.7",		
+		"when":"2.5.x",		
+		"runrightfast-commons":"git://github.com/runrightfast/runrightfast-commons.git#0.0.15",
+		"runrightfast-couchbase":"git://github.com/runrightfast/runrightfast-couchbase.git#0.0.8",
+		"runrightfast-validator":"git://github.com/runrightfast/runrightfast-validator.git#0.0.8",		
+		"hoek":"1.1.x",		
 		"log4js":"0.6.x",
 		"extend":"1.2.x",
 		"uuid":"1.4.x",
-		"couchbase":"1.0.x",
-		"when":"2.5.x",
+		"couchbase":"1.0.x",		
 		"joi":"1.2.x"
 	},
 	"devDependencies":{

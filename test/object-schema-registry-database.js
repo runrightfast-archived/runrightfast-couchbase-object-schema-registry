@@ -20,7 +20,7 @@ var cbConnManager = require('runrightfast-couchbase').couchbaseConnectionManager
 var ObjectSchemaRegistryDatabase = require('..').ObjectSchemaRegistryDatabase;
 var ObjectSchema = require('runrightfast-validator').validatorDomain.ObjectSchema;
 var when = require('when');
-var uuid = require('uuid');
+var uuid = require('runrightfast-commons').uuid;
 var lodash = require('lodash');
 
 var objectSchemaId = require('runrightfast-validator').validatorDomain.objectSchemaId;
@@ -188,7 +188,7 @@ describe('database', function() {
 	});
 
 	it('getting an ObjectSchema from the database for an invalid id will return an error', function(done) {
-		when(database.getObjectSchema('ns://' + uuid.v4(), '0.0.1'), function(result) {
+		when(database.getObjectSchema('ns://' + uuid(), '0.0.1'), function(result) {
 			done(new Error('expected an error because the doc should not exist'));
 		}, function(err) {
 			expect(err.code).to.equal('NOT_FOUND');
